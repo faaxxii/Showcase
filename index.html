@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>VATChain — One Transaction. One Truth.</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- GSAP -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+<!-- LENIS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.6/dist/lenis.css">
+<script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.6/dist/lenis.min.js"></script>
+
+<!-- THREE + VANTA -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overscroll-behavior:none}
+body{
+  background:#020617;
+  color:#fff;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+  overflow-x:hidden;
+}
+#vanta-bg{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:-2;
+}
+
+/* LOADER */
+#loader{
+  position:fixed;
+  inset:0;
+  background:#020617;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  transition:opacity 1.2s ease,visibility 1.2s ease;
+}
+.loader-inner{
+  position:relative;
+  width:160px;
+  height:160px;
+}
+.loader-ring{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border:3px solid rgba(255,255,255,0.15);
+  border-top-color:#38bdf8;
+  animation:spin 1.2s linear infinite;
+}
+.loader-percent{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.6rem;
+  font-weight:600;
+  letter-spacing:0.12em;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loader.hide{opacity:0;visibility:hidden}
+
+/* LAYOUT */
+.section{
+  min-height:100vh;
+  padding:80px 32px;
+  display:flex;
+  align-items:center;
+}
+.section-inner{
+  max-width:1100px;
+  margin:0 auto;
+}
+.hero-center{
+  text-align:center;
+  max-width:800px;
+  margin:0 auto;
+}
+.hero-title{
+  font-size:clamp(3rem,5vw,4.5rem);
+  font-weight:700;
+  letter-spacing:-0.04em;
+}
+.hero-sub{
+  margin-top:18px;
+  font-size:1.2rem;
+  color:rgba(226,232,240,0.9);
+}
+.hero-pill{
+  display:inline-flex;
+  margin-top:24px;
+  padding:10px 20px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,0.5);
+  font-size:0.9rem;
+  color:rgba(226,232,240,0.9);
+}
+.section-label{
+  font-size:0.75rem;
+  text-transform:uppercase;
+  letter-spacing:0.22em;
+  color:rgba(148,163,184,0.9);
+  margin-bottom:12px;
+}
+.section-title{
+  font-size:clamp(2.2rem,3vw,3.2rem);
+  font-weight:600;
+  letter-spacing:-0.03em;
+}
+.section-text{
+  margin-top:18px;
+  font-size:1rem;
+  color:rgba(226,232,240,0.9);
+  max-width:640px;
+}
+
+/* SLIDE 2 CENTER + SCROLL BAR */
+.slide2-center{text-align:center}
+.slide2-bar{
+  margin:32px auto 0;
+  width:0;
+  height:4px;
+  border-radius:999px;
+  background:linear-gradient(90deg,#38bdf8,#6366f1);
+}
+
+/* FLIP CARD — PREMIUM VERSION */
+.question-wrapper{
+  display:flex;
+  justify-content:center;
+  margin-top:20px;
+}
+
+.question-card{
+  width:520px;              /* bigger */
+  height:200px;             /* bigger */
+  perspective:1400px;       /* deeper 3D */
+}
+
+.question-inner{
+  width:100%;
+  height:100%;
+  position:relative;
+  transform-style:preserve-3d;
+  transition:transform 0.9s cubic-bezier(0.23,1,0.32,1);
+  cursor:pointer;
+  border-radius:22px;
+  box-shadow:0 20px 40px rgba(0,0,0,0.45);
+}
+
+/* Hover lift */
+.question-inner:hover{
+  transform:translateY(-6px) rotateY(var(--rotateY, 0deg));
+}
+
+/* Card faces */
+.question-face{
+  position:absolute;
+  inset:0;
+  border-radius:22px;
+  background:rgba(15,23,42,0.85);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(56,189,248,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  backface-visibility:hidden;
+  box-shadow:inset 0 0 25px rgba(56,189,248,0.15);
+}
+
+/* Animated neon border */
+.question-face::after{
+  content:"";
+  position:absolute;
+  inset:-2px;               /* slightly outside to create a glow edge */
+  border-radius:22px;
+  border:2px solid transparent;
+  background:linear-gradient(135deg,#38bdf8,#6366f1,#38bdf8);
+  opacity:0.9;
+  z-index:-1;               /* sits behind the card content */
+  filter:blur(2px);         /* soft glow */
+  animation:borderGlow 4s linear infinite;
+}
+
+@keyframes borderGlow{
+  0%{filter:blur(2px) hue-rotate(0deg);}
+  100%{filter:blur(2px) hue-rotate(360deg);}
+}
+
+/* FRONT */
+.question-front{
+  font-size:1.3rem;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:#38bdf8;
+  font-weight:600;
+}
+
+/* BACK */
+.question-back{
+  transform:rotateY(180deg);
+  font-size:1.15rem;
+  line-height:1.5;
+  color:rgba(226,232,240,0.95);
+  text-align:center;
+  padding:30px;
+}
+
+/* OPEN STATE */
+.question-inner.open{
+  transform:rotateY(180deg);
+}
+
+/* OTHER SLIDES */
+
+/* IMAGE FRAMES (equal size, clean, responsive) */
+.image-frame{
+  border-radius:20px;
+  border:1px solid rgba(148,163,184,0.5);
+  background:rgba(15,23,42,0.96);
+  height:260px;                 /* consistent height */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  cursor:pointer;
+  transition:transform .3s ease;
+}
+
+.frame-img{
+  width:100%;
+  height:100%;
+  object-fit:cover;             /* ensures all images fill the box */
+  transition:transform .4s ease;
+}
+
+.image-frame:hover .frame-img{
+  transform:scale(1.05);        /* subtle zoom */
+}
+
+/* FULLSCREEN IMAGE VIEWER */
+#imgViewer{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:99999;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .4s ease;
+}
+
+#imgViewer.open{
+  opacity:1;
+  pointer-events:auto;
+}
+
+#imgViewer img{
+  max-width:90%;
+  max-height:90%;
+  border-radius:12px;
+  box-shadow:0 0 40px rgba(0,0,0,0.6);
+}
+
+/* CLOSE BUTTON */
+#imgClose{
+  position:absolute;
+  top:40px;
+  right:40px;
+  font-size:1.1rem;
+  color:white;
+  cursor:pointer;
+  font-weight:600;
+  background:rgba(255,255,255,0.15);
+  padding:8px 16px;
+  border-radius:8px;
+  backdrop-filter:blur(6px);
+  transition:background .3s ease;
+}
+
+#imgClose:hover{
+  background:rgba(255,255,255,0.3);
+}
+.section-row{
+  display:grid;
+  grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);
+  gap:40px;
+}
+.section-row.reverse{
+  grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);
+}
+.image-frame{
+  border-radius:20px;
+  border:1px solid rgba(148,163,184,0.5);
+  background:rgba(15,23,42,0.96);
+  height:260px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:0.85rem;
+  color:rgba(148,163,184,0.9);
+}
+.roles-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+  margin-top:24px;
+}
+.role-card{
+  border-radius:18px;
+  border:1px solid rgba(148,163,184,0.5);
+  background:rgba(15,23,42,0.96);
+  padding:16px;
+}
+.impact-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+  margin-top:24px;
+}
+.impact-card{
+  border-radius:18px;
+  border:1px solid rgba(148,163,184,0.5);
+  background:rgba(15,23,42,0.96);
+  padding:16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.footer{
+  min-height:60vh;
+  padding:80px 32px;
+  display:flex;
+  align-items:flex-end;
+}
+.footer-inner{
+  max-width:1100px;
+  margin:0 auto;
+}
+.footer-title{
+  font-size:clamp(2.4rem,3.4vw,3.4rem);
+  font-weight:600;
+  letter-spacing:-0.03em;
+}
+.footer-text{
+  margin-top:18px;
+  font-size:1rem;
+  color:rgba(226,232,240,0.9);
+  max-width:520px;
+}
+
+@media(max-width:900px){
+  .section-row,.section-row.reverse{grid-template-columns:minmax(0,1fr)}
+  .roles-grid,.impact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:640px){
+  .section,.footer{padding:60px 20px}
+  .roles-grid,.impact-grid{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+</head>
+
+<body>
+
+<div id="loader">
+  <div class="loader-inner">
+    <div class="loader-ring"></div>
+    <div class="loader-percent" id="loaderPercent">0%</div>
+  </div>
+</div>
+
+<div id="vanta-bg"></div>
+
+<div class="lenis-smooth">
+
+  <!-- HERO -->
+  <section class="section" id="hero">
+    <div class="section-inner hero-center">
+      <h1 class="hero-title">One Transaction.<br/>One Truth.</h1>
+      <p class="hero-sub">
+        A real‑time VAT compliance layer for Europe—built on blockchain, designed to make fraud visible instantly.
+      </p>
+      <div class="hero-pill">VAT fraud • Automation • Transparency</div>
+    </div>
+  </section>
+
+  <!-- 2 — PROBLEM -->
+  <section class="section" id="slide2">
+    <div class="section-inner slide2-center">
+      <div class="section-label">The problem</div>
+      <h2 class="section-title">€128 Billion Lost to VAT Fraud Every Year</h2>
+      <p class="section-text">
+        Cross‑border VAT fraud drains EU budgets by over €128 billion annually.
+      </p>
+      <div class="slide2-bar" id="slide2Bar"></div>
+    </div>
+  </section>
+
+  <!-- 3 — QUESTION (CLICK → FLIP → SCROLL → AUTO CLOSE) -->
+  <section class="section" id="slide3">
+    <div class="section-inner hero-center">
+      <div class="section-label">Question</div>
+      <div class="question-wrapper">
+        <div class="question-card">
+          <div class="question-inner" id="questionInner">
+            <div class="question-face question-front">
+              CLICK ME
+            </div>
+            <div class="question-face question-back">
+              What If Every Transaction Verified Itself?<br/><br/>
+              Imagine invoices that carry cryptographic proof—validated instantly.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 — PRODUCT (IMAGE) -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-row reverse">
+        <div class="image-frame">
+          <img src="Logo.jpeg" width="" class="frame-img" data-full="Logo.jpeg">
+        </div>
+        <div>
+          <div class="section-label">Product</div>
+          <h2 class="section-title">Introducing VATChain</h2>
+          <p class="section-text">
+            Every invoice becomes a verifiable on‑chain asset shared across the ecosystem.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 — HOW IT WORKS -->
+  <section class="section" id="mechanics">
+  <div class="section-inner hero-center">
+    <div class="section-label">Mechanics</div>
+    <h2 class="section-title">One Transaction. One Truth.</h2>
+    <p class="section-text" style="margin-left:auto;margin-right:auto;">
+      Smart contracts enforce VAT rules and record outcomes on a shared ledger.
+      Every invoice becomes a cryptographically verifiable event the moment it’s created.
+    </p>
+  </div>
+</section>
+
+<!-- 6 — INTERFACE (IMAGE) -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-row reverse">
+        <div class="image-frame">
+          <img src="Overview_Dashboard.png" class="frame-img" data-full="Overview_Dashboard.png">
+        </div>
+        <div>
+          <div class="section-label">Interface</div>
+          <h2 class="section-title">VAT Happens Automatically</h2>
+          <p class="section-text">
+            VAT is calculated, validated, and prepared for recording instantly.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 — VERIFICATION (IMAGE) -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-row">
+        <div>
+          <div class="section-label">Verification</div>
+          <h2 class="section-title">Every Invoice Becomes Verifiable</h2>
+          <p class="section-text">
+            Hashes, IDs, and statuses replace PDFs and manual checks.
+          </p>
+        </div>
+        <div class="image-frame">
+          <img src="invoice.png" class="frame-img" data-full="invoice.png">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 — ROLES -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-label">Actors</div>
+      <h2 class="section-title">One Platform. Four Perspectives.</h2>
+      <div class="roles-grid">
+        <div class="role-card">👤 User<br/>Simple invoice creation.</div>
+        <div class="role-card">🏪 Business<br/>Automated VAT workflows.</div>
+        <div class="role-card">📋 Auditor<br/>Tamper‑evident history.</div>
+        <div class="role-card">🏛 Authority<br/>Real‑time VAT data.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 — IMPACT -->
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-label">Impact</div>
+      <h2 class="section-title">Less Fraud. More Transparency.</h2>
+      <div class="impact-grid">
+        <div class="impact-card">🔒 Fraud Prevention</div>
+        <div class="impact-card">⚡ Automation</div>
+        <div class="impact-card">👁 Transparency</div>
+        <div class="impact-card">🌍 EU Scalability</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 — FUTURE -->
+  <section class="footer">
+    <div class="footer-inner">
+      <div class="section-label">Future</div>
+      <h2 class="footer-title">Ready For Europe.</h2>
+      <p class="footer-text">
+        VATChain aligns with Europe’s move toward real‑time digital reporting.
+      </p>
+      <h3 class="footer-title" style="margin-top:32px;color:#38bdf8;">
+        One Transaction. One Truth.
+      </h3>
+    </div>
+  </section>
+
+</div>
+
+<script>
+
+// Wait until EVERYTHING is loaded
+window.addEventListener("load", () => {
+
+  const questionInner = document.getElementById("questionInner");
+
+  // CLICK → FLIP
+  questionInner.addEventListener("click", () => {
+    questionInner.classList.add("open");
+  });
+
+  // SCROLL → AUTO CLOSE
+  ScrollTrigger.create({
+    trigger: "#slide3",
+    start: "bottom bottom",
+    onEnter: () => questionInner.classList.remove("open"),
+    onLeaveBack: () => questionInner.classList.remove("open")
+  });
+
+});
+gsap.registerPlugin(ScrollTrigger);
+
+/* LOADER 0→100% */
+let percent = 0;
+const loaderText = document.getElementById("loaderPercent");
+let interval = setInterval(() => {
+  percent++;
+  loaderText.textContent = percent + "%";
+  if (percent >= 100) {
+    clearInterval(interval);
+    setTimeout(() => {
+      document.getElementById("loader").classList.add("hide");
+    }, 300);
+  }
+}, 18);
+
+/* VANTA */
+VANTA.NET({
+  el: "#vanta-bg",
+  mouseControls: true,
+  touchControls: true,
+  gyroControls: false,
+  minHeight: 200.00,
+  minWidth: 200.00,
+  scale: 1.00,
+  scaleMobile: 1.00,
+  color: 0x00eaff,
+  backgroundColor: 0x020617,
+  points: 12.00,
+  maxDistance: 22.00,
+  spacing: 18.00
+});
+
+/* LENIS SMOOTH SCROLL */
+const lenis = new Lenis({
+  duration: 1.4,
+  smooth: true,
+  smoothTouch: true,
+  wheelMultiplier: 1.1,
+  easing: (t) => 1 - Math.pow(1 - t, 3)
+});
+function raf(time){
+  lenis.raf(time);
+  requestAnimationFrame(raf);
+}
+requestAnimationFrame(raf);
+lenis.on('scroll', ScrollTrigger.update);
+
+/* SECTION FADE/SLIDE */
+gsap.utils.toArray(".section, .footer").forEach((section) => {
+  const inner = section.querySelector(".section-inner") || section.querySelector(".footer-inner");
+  gsap.from(inner,{
+    opacity:0,
+    y:40,
+    duration:1.1,
+    ease:"power3.out",
+    scrollTrigger:{
+      trigger:section,
+      start:"top 85%",
+      toggleActions:"play none none reverse"
+    }
+  });
+});
+
+/* SLIDE 2 BAR ANIMATION */
+gsap.to("#slide2Bar",{
+  width:"60%",
+  ease:"power3.out",
+  scrollTrigger:{
+    trigger:"#slide2",
+    start:"top 80%",
+    end:"top 20%",
+    scrub:true
+  }
+});
+
+/* FOLDING QUESTION BOX CLICK + AUTO CLOSE ON SCROLL */
+const questionInner = document.getElementById("questionInner");
+
+questionInner.addEventListener("click", () => {
+  questionInner.classList.add("open");
+});
+
+/* AUTO CLOSE WHEN SCROLLING */
+ScrollTrigger.create({
+  trigger: "#slide3",
+  start: "bottom bottom",
+  onEnter: () => questionInner.classList.remove("open"),
+  onLeaveBack: () => questionInner.classList.remove("open")
+});
+
+const viewer = document.getElementById("imgViewer");
+const viewerImg = document.getElementById("imgFull");
+const viewerClose = document.getElementById("imgClose");
+
+document.querySelectorAll(".frame-img").forEach(img => {
+  img.addEventListener("click", () => {
+    viewerImg.src = img.dataset.full;
+    viewer.classList.add("open");
+  });
+});
+
+viewerClose.addEventListener("click", () => {
+  viewer.classList.remove("open");
+});
+
+viewer.addEventListener("click", (e) => {
+  if(e.target === viewer){
+    viewer.classList.remove("open");
+  }
+});
+</script>
+
+</body>
+</html>
